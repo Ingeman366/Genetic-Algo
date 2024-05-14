@@ -46,9 +46,13 @@
   var population = [];
   var populationNumber = 30;
   var numberOfGenesInChromosome = 8;
-  var activePopulation = -1;
+  var activePopulation = 1;
   var maxTimePrGame = 3000;
+  var generation = 1;
 
+
+  //Speed logs
+  
   function GA_DriveCar_One_Time_Step() // denne bliver kaldt hvert 20. millisekund
   {
     if (timeCount > maxTimePrGame)
@@ -57,24 +61,28 @@
       car.x = 0;
       car.y = 0;
     }
-    //--------IN: use these 4 inputs to calculate the output.---------------------
-    // speed
-    // distantFront;
-    // distantLeft;
-    // distantRight;
+    if (speed < 0){
+      carCrashed();
+    }
 
-    //--------The Genetic Algorithm Network----------------------------------------
     try
     {
-      // ### Find en bedre måde at udregne outRotate ud fra data som speed og distance samt gener
-      var outRotate = population[0].chromosome[0];
+      
 
-      // ### Find en bedre måde at udregne outSpeed ud fra data som speed og distance samt gener
-      var outSpeed = population[0].chromosome[1];
+    var outRotate =(distantLeft * Number(population[activePopulation-1].chromosome[0])) +
+                (distantRight * Number(population[activePopulation-1].chromosome[1])) +
+                (distantLeft * Number(population[activePopulation-1].chromosome[2])) +
+                (distantRight * Number(population[activePopulation-1].chromosome[3]));
+              
 
-      //Postive is Right and Negative is Left.
+    
+    var outSpeed = (speed * Number(population[activePopulation-1].chromosome[4])) +
+               (distantFront * Number(population[activePopulation-1].chromosome[5])) +
+               (speed * Number(population[activePopulation-1].chromosome[6])) +
+               (distantFront * Number(population[activePopulation-1].chromosome[7]));
+
       rotateCar(outRotate);
-      //Positive is Faster and Negative is Slower.
+
       speedChange(outSpeed);
 
       // ### for hvert step, undersøg om bilen har nået et vist del-mål (som bidrager til dens fitness)
@@ -83,54 +91,68 @@
     }
     catch (err)
     {
-      console.log("Error in GA_DriveCar " + err);
+    
     }
 
   }
 
-  // 
-  // ### Lav noget kode som måler fitness (altså, hvor bilen får
-  // poeng for at have kommet et vist stykke fremad)
-
-  // ### Lav kode, som håndterer generationer:
-  // hvis det er første omgang, så lav en random generation via GA_CreateRandomGeneration()
-  // ellers lav en forbedret generation
-
-
+  
   function GA_CreateNewPopulation()
   {
-    console.log("New Population created");
 
-    // First time we must create a Random Generation.
-    // So we call this function the first time we run. The second time
-    // you should run the GA algoritm, that you have to create.
-    GA_CreateRandomGeneration();
+    if(generation > 1){
+      generateNextGeneration();
+    } else{
+      GA_CreateRandomGeneration();
+    }
+    
   }
 
-  var population = [];
-  var populationNumber = 6;
-  var numberOfGenesInChromosome = 4;
+  function GA_CreateRandomGeneration() {
+    population = [];
+    for (var i = 0; i < populationNumber; i++) {
+        var obj = {
+            chromosome: [],
+            fitness: 0,
+            fitnessInProcent: 0,
+            car: {
+                x: 30,
+                y: 70,
+                speed: defaultSpeedStart,
+                angle: 0,
+                isCrashed: false
+            }
+        };
+        for (var j = 0; j < numberOfGenesInChromosome; j++) {
+            obj.chromosome.push(getRandomNumber(10, 2)); // -5 to 5, 2 decimal.
+        }
+        population.push(obj);
+    }
+}
+
+  /*
   function GA_CreateRandomGeneration()
   {
-    // This function is just started. I have added the most important ideas like
-    // an array that holde a population of chromosome. And also I added som chromosome objekt
-    // that hold the chromosome and its fitness.
     population = [];
     for (var i = 0; i < populationNumber; i++)
     {
-      var obj = { chromosome: [], fitness: 0 , fitnessInProcent:0};
+      var obj = {chromosome: [], fitness: 0, fitnessInProcent: 0};
       for (var j = 0; j < numberOfGenesInChromosome; j++)
       {
-        obj.chromosome.push(getRandomNumber(2, 1)); //-5 to 5, 2 decimal.
+        obj.chromosome.push(getRandomNumber(10, 2)); //-5 to 5, 2 decimal.
       }
+      console.log(obj.chromosome)
       population.push(obj);
+    
     }
   }
+  */
   function carCrashed()
   {
+    
     ctx.fillText("Car has crashed", 10, 20);
-    //calculateFitnessForCar();
-    setTimeout(newGame, 1000);
+    calculateFitnessForCar();
+    setTimeout(newGame, 0.1);
   }
 
 
@@ -141,8 +163,98 @@
     ntx = canvas.getContext("2d");
     ntx.clearRect(0, 0, canvas.width, canvas.height);
     ntx.font = "bold 14px Arial";
-    ntx.fillText("Active population = " + activePopulation + " of " + populationNumber, 200, 20);
+    ntx.fillText("Current car driving = " + (activePopulation) + " of " + populationNumber, 200, 20);
+    ntx.fillText("Generation = " + generation, 200, 60);
   }
+  
+  function calculateFitnessForCar(){
+      if (car.x < 30 && car.y < 85){
+        population[activePopulation-1].fitness = 0
+        console.log("Car has crashed : Wrong way")
+      } else if(speed < 0){
+        population[activePopulation-1].fitness = 0
+        console.log("Car has crashed : Negative speed")
+      } else if(speed < 1){
+        fitness = (timeCount/10)
+        population[activePopulation-1].fitness = fitness
+        console.log("Car has crashed  low speed. Fitness: " + fitness)
+      } else{
+        fitness = timeCount/10
+        //if (car.x > 40 && car.y > 2){
+        //  fitness += 20;
+        //}
+
+      population[activePopulation-1].fitness = fitness
+      console.log("Car has crashed fitness: " + fitness)
+      }
+      if(activePopulation == populationNumber){
+        activePopulation = 1;
+        generation++;
+    } else {
+      activePopulation++;
+    }
+  }
+
+
+
+
+
+function generateNextGeneration(){
+
+  newPopulation = [];
+  population.sort((a, b) => b.fitness - a.fitness);
+  let cutoff = Math.floor(population.length / 2);
+  console.log(population)
+
+  console.log("Population length: " + population.length)
+  newPopulation.push(population[0]);
+  for (let i = 0; i < cutoff; i++) {
+        for (let j = 0; j < cutoff; j++) {
+            if (newPopulation.length < population.length) {
+                let child = crossover(population[i], population[j]);
+                newPopulation.push(child);
+                console.log("Pushed child: (" + (i + 1) + "," + (j+1) + ")")
+            }
+        }
+    }
+
+
+
+  console.log("New Population length: " + newPopulation.length)
+  for(i = 1; i < populationNumber; i++){
+    console.log(" I = " + i)
+    mutateChromosome(newPopulation[i].chromosome, 0.1);
+  }
+  population = newPopulation;
+  
+  console.log(population)
+}
+
+
+function crossover(parent1, parent2) {
+    let childChromosome = [];
+    let midpoint = Math.floor(parent1.chromosome.length / 2); 
+    for (let i = 0; i < parent1.chromosome.length; i++) {
+        if (i < midpoint) childChromosome.push(parent1.chromosome[i]);
+        else childChromosome.push(parent2.chromosome[i]);
+    }
+    return { chromosome: childChromosome, fitness: 0, fitnessInProcent: 0 };
+}
+
+function mutateChromosome(chromosome, mutationRate) {
+    chromosome.forEach((gene, index) => {
+        if (Math.random() < mutationRate) {
+            
+            chromosome[index] = getRandomNumber(2, 5); 
+        }
+    });
+}
+
+function mutatePopulation(population, mutationRate) {
+  for (let i = 1; i < population.length; i++) {
+    mutateChromosome(population[i].chromosome, mutationRate);
+  }
+}
 
 </Script>
 </body>

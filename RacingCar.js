@@ -1,15 +1,18 @@
 var myTimer;
 var defaultRotatValue = 30;
 var defaultSpeedIncriment = 0.1;
-var defaultSpeedStart = 0.3;
+var defaultSpeedStart = 0;
 var timeCount = 0;
-var car = { x: 130, y: 65 };
+var car = { x: 60, y: 70};
+//var car = { x: 30, y: 70};
 var lineLength = 30;
 var angle = 0;
 var c ;
 var ctx;
 var Bane = new Image();
 var aktuelColor = "black";
+var currentCarIndex = 0;
+
 //----------------------------------------
 var speed = defaultSpeedStart;
 var distantFront;
@@ -32,15 +35,39 @@ function hentBilledeAfBanen() {
         drawEveryThing();
     }
 }
+/*
+function Timer() {
+    population.forEach((individual) => {
+        if (!individual.car.isCrashed) {
+            forward(individual.car);
+            rotateCar(individual.car, calculateRotation(individual.chromosome));
+            speedChange(individual.car, calculateSpeedChange(individual.chromosome));
+            checkCrash(individual.car);
+        }
+    });
+
+    drawEveryThing();
+
+    // Check if all cars are crashed
+    if (population.every(individual => individual.car.isCrashed)) {
+        clearInterval(myTimer);
+        GA_CreateNewPopulation();
+    }
+} */
+
 
 function Timer() {
+    
     forward();
+
     drawEveryThing();
+    
     timeCount++;
 
     //----------Genetic Algorithm is Driving the car har--------------
     GA_DriveCar_One_Time_Step();
 }
+/*
 function newGame() {
     document.getElementById('startNewGameButton').style.visibility = 'hidden';    
     car = { x: 130, y: 65 };
@@ -51,8 +78,37 @@ function newGame() {
     myTimer = setInterval(Timer, 20);
 
     //----------Genetic Algorithm Create New Population her---------------
+
     GA_CreateNewPopulation();
+} */
+
+function newGame() {
+    
+    if (currentCarIndex >= population.length -1){
+
+        GA_CreateNewPopulation();
+        currentCarIndex = 0;
+    } else {
+
+        currentCarIndex++;
+    }
+    
+    resetGameState();
+    
 }
+
+function resetGameState() {
+    car = { x: 60, y: 70 };
+    //car = { x: 30, y: 70 };
+    timeCount = 0;
+    angle = 0;
+    speed = defaultSpeedStart;
+    clearInterval(myTimer);
+    myTimer = setInterval(Timer, 1);
+    document.getElementById('startNewGameButton').style.visibility = 'hidden';
+}
+
+
 function getRandomNumber(decimalPlaces, size) {
     return ((Math.random() - 0.5) * size).toFixed(decimalPlaces);
     //getRandomNumber(2,1); giver -0.50 til 0.50
@@ -84,6 +140,8 @@ function doKeyDown(e) {
     }
 }
 function forward() {
+    
+
     var nyPos = lineToAngle(ctx, car.x, car.y, speed, angle);
     car.x = nyPos.x;
     car.y = nyPos.y;
@@ -98,7 +156,7 @@ function rotateCar(leftRigth) {
     angle = angle + leftRigth/10;
     if (angle > 360)
         angle = 0;
-}
+}  
 //Genetic Algorithm output function
 function speedChange(speedIn) {
     speed += speedIn/1000 ;
@@ -130,11 +188,14 @@ function farwardDistance() {
     var length = 5;
     var x2, y2;
     for (var i = 0; i < 200; i++) {
-
         var curentAngel = (Math.PI / 180) * angle;
-
         x2 = car.x + length * Math.cos(curentAngel);
         y2 = car.y + length * Math.sin(curentAngel);
+        
+        if (!isFinite(x2) || !isFinite(y2)) {
+    
+            break;
+        }
 
         var imgData = ctx.getImageData(x2, y2, 10, 10);
         var red = imgData.data[0];
@@ -277,18 +338,18 @@ function drawEveryThing() {
     ctx.font = "15px Arial";
     var xpos = 350;
     var ypos = 60;
-    ctx.fillText("Left='a' Right='d' Fast='w' Slow='s'", xpos - 40, 20);
+    //ctx.fillText("Left='a' Right='d' Fast='w' Slow='s'", xpos - 40, 20);
     ctx.fillText("", xpos, 40);
 
     distantFront = dist(distFarward.x, distFarward.y, justInFront.x, justInFront.y);
     distantLeft = dist(distLeft.x, distLeft.y, justInFront.x, justInFront.y);
     distantRight = dist(distRight.x, distRight.y, justInFront.x, justInFront.y);
-    ctx.fillText("Car x = " + car.x.toFixed(0) + " Car y = " + car.y.toFixed(0), xpos, ypos );
-    ctx.fillText("Distance front = " + Math.ceil(distantFront), xpos, ypos + 20);
-    ctx.fillText("Distance left = " + Math.ceil(distantLeft), xpos, ypos + 40);
-    ctx.fillText("Distance right = " + Math.ceil(distantRight), xpos, ypos + 60);
-    ctx.fillText("Time = " + timeCount, xpos, ypos + 80);
-    ctx.fillText("Speed = " + speed.toFixed(2), xpos, ypos + 100);
+    ctx.fillText("Car x = " + car.x.toFixed(0) + " Car y = " + car.y.toFixed(0), xpos, ypos-40 );
+    ctx.fillText("Distance front = " + Math.ceil(distantFront), xpos, ypos - 25);
+    ctx.fillText("Distance left = " + Math.ceil(distantLeft), xpos-70, ypos + 110);
+    ctx.fillText("Distance right = " + Math.ceil(distantRight), xpos + 70, ypos + 110);
+    ctx.fillText("Time = " + timeCount, xpos, ypos + 125);
+    ctx.fillText("Speed = " + speed.toFixed(2), xpos, ypos + 140);
 
     //Collision control - Collision control - Collision control - Collision control
     //Collision control - Collision control - Collision control - Collision control
@@ -306,5 +367,36 @@ function drawEveryThing() {
     else
     {
         aktuelColor = "black";
+    }
+}
+
+
+/* NEW STUFF */
+
+
+
+
+function calculateRotation(chromosome) {
+    // Example rotation calculation based on chromosome
+    return (distantLeft * Number(chromosome[0])) +
+           (distantRight * Number(chromosome[1])) +
+           (distantLeft * Number(chromosome[2])) +
+           (distantRight * Number(chromosome[3]));
+}
+
+function calculateSpeedChange(chromosome) {
+    // Example speed change calculation based on chromosome
+    return (speed * Number(chromosome[4])) +
+    (distantFront * Number(chromosome[5])) +
+    (speed * Number(chromosome[6])) +
+    (distantFront * Number(chromosome[7]));
+}
+
+function checkCrash(car) {
+    // Example crash conditions: check if the car hits boundaries or other criteria
+    var imgData = ctx.getImageData(car.x, car.y, 10, 10);
+    var green = imgData.data[1];
+    if (green < 200) { // Assuming green value below 200 indicates off-track
+        car.isCrashed = true;
     }
 }
